@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
+</head>
+
+<body>
+  <button onclick="connectWallet()">Connect</button>
+  <input type="file" id="fileInput" />
+  <button onclick="mintNFT()">submit</button>
+
+  <script>
+    // Khai báo biến wallet để lưu trữ thông tin ví
+    var publicKey;
+    // Sử dụng async function để chờ kết quả trả về từ việc kết nối ví
+    // (async () => {
+    //   await window.solana.connect();
+    //   publicKey = window.phantom.solana.publicKey.toBase58();
+    //   console.log(publicKey);
+    // })();
+
+    function connectWallet() {
+
+      (async () => {
+        try {
+          await window.solana.connect();
+          publicKey = window.phantom.solana.publicKey.toBase58();
+          console.log(publicKey);
+          // 26qv4GCcx98RihuK3c4T6ozB3J7L6VwCuFVc7Ta2A3Uo 
+        } catch (err) {
+          // { code: 4001, message: 'User rejected the request.' }
+        }
+      })();
+
+    }
+
+
+    const PRIV_KEY = "ZQyLvoNjq3yy7bjJ";
+
+    const toTransaction = (encodedTransaction) => solanaWeb3.Transaction.from(Uint8Array.from(atob(encodedTransaction), c => c.charCodeAt(0)));
+
+    const mintNFT = async () => {
+      var myHeaders = new Headers();
+      myHeaders.append("x-api-key", PRIV_KEY);
+      const fileInput = document.querySelector("#fileInput");
+
+      var formdata = new FormData();
+      formdata.append("network", "devnet");
+      formdata.append("wallet", "4DWthazCtu2agP3C6Y8AxLdtvXeBW4ayi8DxbHxoomXq");
+      formdata.append("name", "FoodX");
+      formdata.append("symbol", "FDX");
+      formdata.append("description", "FOODX makes Web3 so easy!");
+      formdata.append("attributes", '[{"trait_type":"dev power","value":"over 900"}]');
+      formdata.append("external_url", "https://shyft.to");
+      formdata.append("max_supply", "1");
+      formdata.append("royalty", "5");
+      formdata.append("file", fileInput.files[0], "index.png");
+      formdata.append("nft_receiver", "GoSpsK9MgW26TP2ZgRnLnUqsySV58dE4SsR5Lg9rJ7Un");
+      formdata.append('service_charge', '{"receiver": "4DWthazCtu2agP3C6Y8AxLdtvXeBW4ayi8DxbHxoomXq","amount": 0.01}');
+
+      var requestOptions = {
+        method: 'POST',
+        headers: myHeaders,
+        body: formdata,
+        redirect: 'follow'
+      };
+
+      fetch("https://api.shyft.to/sol/v1/nft/create_detach", requestOptions)
+        .then(async response =>{
+          let res = await response.json();
+          let transaction = toTransaction(res.result.encoded_transaction);
+
+          window.phantom.solana.signTransaction(transaction);
+
+          const signedTransaction = await window.phantom.solana.signTransaction (transaction);
+          const connection = new solanaWeb3.Connection("https://api.devnet.solana.com");
+          const signature = await connection.sendRawTransaction(signedTransaction.serialize());
+        })
+        .catch(error => console.log('error',error));
+    }
+
+  </script>
+</body>
+
+</html>
